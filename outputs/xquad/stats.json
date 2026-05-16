@@ -1,0 +1,5 @@
+{
+  "train_size": 10,
+  "test_size": 10,
+  "avg_answer_words": 107.6
+}
