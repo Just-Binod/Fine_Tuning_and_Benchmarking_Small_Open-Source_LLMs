@@ -1,0 +1,25 @@
+2026-05-17 06:41:03,915 [INFO] 
+══════════════════════════════════════════════════
+2026-05-17 06:41:03,915 [INFO]   Nepali News Scraper — Summarization Data
+2026-05-17 06:41:03,915 [INFO] ══════════════════════════════════════════════════
+2026-05-17 06:41:03,915 [INFO] 
+─────────────────────────────────────────────
+2026-05-17 06:41:03,915 [INFO]   Scraping: onlinekhabar
+2026-05-17 06:41:03,915 [INFO] ─────────────────────────────────────────────
+2026-05-17 06:41:03,915 [INFO]   Trying sitemap: https://www.onlinekhabar.com/sitemap-news.xml
+2026-05-17 06:41:07,457 [WARNING] HTTP 404 → https://www.onlinekhabar.com/sitemap-news.xml
+2026-05-17 06:41:07,458 [WARNING]   No URLs from https://www.onlinekhabar.com/sitemap-news.xml
+2026-05-17 06:41:07,458 [INFO]   Trying sitemap: https://www.onlinekhabar.com/news-sitemap.xml
+2026-05-17 06:41:10,817 [WARNING] HTTP 404 → https://www.onlinekhabar.com/news-sitemap.xml
+2026-05-17 06:41:10,818 [WARNING]   No URLs from https://www.onlinekhabar.com/news-sitemap.xml
+2026-05-17 06:41:10,818 [INFO]   Trying sitemap: https://www.onlinekhabar.com/sitemap.xml
+2026-05-17 06:41:14,049 [INFO]   Sitemap → 0 unique article URLs
+2026-05-17 06:41:14,049 [WARNING]   No URLs from https://www.onlinekhabar.com/sitemap.xml
+2026-05-17 06:41:14,049 [ERROR]   [onlinekhabar] No URLs found from any sitemap
+2026-05-17 06:41:14,049 [ERROR] 
+No articles scraped.
+Possible causes:
+  1. Site sitemaps changed URL
+  2. Rate limited — try again in 10 minutes
+  3. Check logs/scraper.log for details
+

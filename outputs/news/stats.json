@@ -1,0 +1,7 @@
+{
+  "train_size": 3000,
+  "test_size": 500,
+  "source": "sanjeev-bhandari01/nepali-summarization-dataset",
+  "avg_article_words": 57.4,
+  "avg_summary_words": 7.4
+}

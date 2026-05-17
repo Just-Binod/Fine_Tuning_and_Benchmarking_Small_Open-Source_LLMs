@@ -1,0 +1,41 @@
+{
+  "translation": {
+    "train": 1816,
+    "test": 1730,
+    "avg_tokens": 43.5,
+    "p95_tokens": 72,
+    "max_tokens": 408,
+    "recommended_max_seq_length": 136,
+    "skipped": {
+      "empty": 0,
+      "too_long": 0,
+      "no_devanagari": 184
+    }
+  },
+  "qa": {
+    "train": 1010,
+    "test": 236,
+    "avg_tokens": 315.0,
+    "p95_tokens": 484,
+    "max_tokens": 512,
+    "recommended_max_seq_length": 548,
+    "skipped": {
+      "empty": 0,
+      "too_long": 341,
+      "no_devanagari": 0
+    }
+  },
+  "summarization": {
+    "train": 3000,
+    "test": 500,
+    "avg_tokens": 163.4,
+    "p95_tokens": 226,
+    "max_tokens": 378,
+    "recommended_max_seq_length": 290,
+    "skipped": {
+      "empty": 0,
+      "too_long": 0,
+      "no_devanagari": 0
+    }
+  }
+}
