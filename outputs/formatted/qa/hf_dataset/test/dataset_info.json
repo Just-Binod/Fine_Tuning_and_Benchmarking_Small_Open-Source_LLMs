@@ -2,9 +2,18 @@
   "citation": "",
   "description": "",
   "features": {
-    "text": {
-      "dtype": "string",
-      "_type": "Value"
+    "messages": {
+      "feature": {
+        "role": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "content": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      },
+      "_type": "List"
     },
     "context": {
       "dtype": "string",
@@ -15,10 +24,6 @@
       "_type": "Value"
     },
     "answer": {
-      "dtype": "string",
-      "_type": "Value"
-    },
-    "source": {
       "dtype": "string",
       "_type": "Value"
     },
