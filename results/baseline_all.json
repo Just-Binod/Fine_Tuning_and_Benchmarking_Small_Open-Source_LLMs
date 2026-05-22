@@ -1,0 +1,72 @@
+{
+  "llama": {
+    "model": "unsloth/Meta-Llama-3.1-8B-Instruct",
+    "model_key": "llama",
+    "eval_type": "zero_shot",
+    "n_samples": 100,
+    "tasks": {
+      "translation": {
+        "scores": {
+          "bleu": 2.09,
+          "bleu_1": 4.86,
+          "bleu_2": 2.34,
+          "bleu_3": 1.55,
+          "bleu_4": 1.09
+        },
+        "n_evaluated": 100,
+        "n_errors": 0
+      },
+      "qa": {
+        "scores": {
+          "f1": 8.78,
+          "exact_match": 0.0
+        },
+        "n_evaluated": 100,
+        "n_errors": 0
+      },
+      "summarization": {
+        "scores": {
+          "rouge_l": 7.16
+        },
+        "n_evaluated": 100,
+        "n_errors": 0
+      }
+    },
+    "evaluated_at": "2026-05-22T02:28:09.039695"
+  },
+  "mistral": {
+    "model": "unsloth/mistral-7b-instruct-v0.3",
+    "model_key": "mistral",
+    "eval_type": "zero_shot",
+    "n_samples": 100,
+    "tasks": {
+      "translation": {
+        "scores": {
+          "bleu": 4.89,
+          "bleu_1": 16.73,
+          "bleu_2": 6.2,
+          "bleu_3": 3.07,
+          "bleu_4": 1.79
+        },
+        "n_evaluated": 100,
+        "n_errors": 0
+      },
+      "qa": {
+        "scores": {
+          "f1": 6.97,
+          "exact_match": 0.0
+        },
+        "n_evaluated": 100,
+        "n_errors": 0
+      },
+      "summarization": {
+        "scores": {
+          "rouge_l": 0.36
+        },
+        "n_evaluated": 100,
+        "n_errors": 0
+      }
+    },
+    "evaluated_at": "2026-05-22T03:37:39.052216"
+  }
+}
