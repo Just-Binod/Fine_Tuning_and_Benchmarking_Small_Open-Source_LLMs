@@ -4,12 +4,12 @@
   "task": "qa",
   "eval_type": "fine_tuned",
   "scores": {
-    "f1": 11.39,
+    "f1": 11.02,
     "exact_match": 0.0
   },
   "n_evaluated": 100,
-  "training_loss": 0.7157583105744738,
+  "training_loss": 0.7156701015703606,
   "train_steps": 132,
   "hf_adapter": "Just-Binod/nepali-llama-qa-qlora",
-  "trained_at": "2026-05-23T07:36:57.932610"
+  "trained_at": "2026-05-23T10:02:35.532008"
 }
