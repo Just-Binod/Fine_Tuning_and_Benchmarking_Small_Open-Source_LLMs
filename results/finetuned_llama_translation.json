@@ -1,0 +1,18 @@
+{
+  "model": "unsloth/Meta-Llama-3.1-8B-Instruct",
+  "model_key": "llama",
+  "task": "translation",
+  "eval_type": "fine_tuned",
+  "scores": {
+    "bleu": 31.48,
+    "bleu_1": 52.73,
+    "bleu_2": 36.09,
+    "bleu_3": 30.37,
+    "bleu_4": 28.08
+  },
+  "n_evaluated": 100,
+  "training_loss": 0.4658253548438089,
+  "train_steps": 342,
+  "hf_adapter": "Just-Binod/nepali-llama-translation-qlora",
+  "trained_at": "2026-05-23T06:01:33.548410"
+}
