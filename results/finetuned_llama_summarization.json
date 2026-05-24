@@ -4,11 +4,11 @@
   "task": "summarization",
   "eval_type": "fine_tuned",
   "scores": {
-    "rouge_l": 36.29
+    "rouge_l": 32.6
   },
   "n_evaluated": 100,
-  "training_loss": 0.8498889021839656,
+  "training_loss": 0.8476581662259204,
   "train_steps": 564,
   "hf_adapter": "Just-Binod/nepali-llama-summarization-qlora",
-  "trained_at": "2026-05-24T04:42:20.099912"
+  "trained_at": "2026-05-24T07:38:06.016503"
 }
