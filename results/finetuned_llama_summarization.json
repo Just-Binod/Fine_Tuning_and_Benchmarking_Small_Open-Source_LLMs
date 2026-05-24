@@ -1,0 +1,14 @@
+{
+  "model": "unsloth/Meta-Llama-3.1-8B-Instruct",
+  "model_key": "llama",
+  "task": "summarization",
+  "eval_type": "fine_tuned",
+  "scores": {
+    "rouge_l": 36.29
+  },
+  "n_evaluated": 100,
+  "training_loss": 0.8498889021839656,
+  "train_steps": 564,
+  "hf_adapter": "Just-Binod/nepali-llama-summarization-qlora",
+  "trained_at": "2026-05-24T04:42:20.099912"
+}
