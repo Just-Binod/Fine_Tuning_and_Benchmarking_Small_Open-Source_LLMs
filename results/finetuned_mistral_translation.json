@@ -4,15 +4,15 @@
   "task": "translation",
   "eval_type": "fine_tuned",
   "scores": {
-    "bleu": 12.57,
-    "bleu_1": 36.81,
-    "bleu_2": 19.32,
-    "bleu_3": 9.52,
-    "bleu_4": 6.25
+    "bleu": 15.73,
+    "bleu_1": 41.24,
+    "bleu_2": 23.62,
+    "bleu_3": 12.56,
+    "bleu_4": 7.79
   },
   "n_evaluated": 100,
-  "training_loss": 1.0681094739869323,
+  "training_loss": 1.0763855799596909,
   "train_steps": 342,
   "hf_adapter": "Just-Binod/nepali-mistral-translation-qlora",
-  "trained_at": "2026-05-25T03:04:24.050432"
+  "trained_at": "2026-05-25T04:38:46.292434"
 }
