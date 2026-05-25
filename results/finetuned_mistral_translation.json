@@ -1,0 +1,18 @@
+{
+  "model": "unsloth/mistral-7b-instruct-v0.3",
+  "model_key": "mistral",
+  "task": "translation",
+  "eval_type": "fine_tuned",
+  "scores": {
+    "bleu": 13.71,
+    "bleu_1": 42.07,
+    "bleu_2": 23.48,
+    "bleu_3": 12.5,
+    "bleu_4": 6.06
+  },
+  "n_evaluated": 100,
+  "training_loss": 1.0715675354003906,
+  "train_steps": 342,
+  "hf_adapter": "Just-Binod/nepali-mistral-translation-qlora",
+  "trained_at": "2026-05-25T02:16:51.398276"
+}
