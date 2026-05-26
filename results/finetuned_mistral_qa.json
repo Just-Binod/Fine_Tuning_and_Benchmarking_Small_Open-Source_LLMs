@@ -1,0 +1,15 @@
+{
+  "model": "unsloth/mistral-7b-instruct-v0.3",
+  "model_key": "mistral",
+  "task": "qa",
+  "eval_type": "fine_tuned",
+  "scores": {
+    "f1": 7.34,
+    "exact_match": 0.0
+  },
+  "n_evaluated": 100,
+  "training_loss": 0.42644228583032434,
+  "train_steps": 132,
+  "hf_adapter": "Just-Binod/nepali-mistral-qa-qlora",
+  "trained_at": "2026-05-25T03:51:50.368984"
+}
