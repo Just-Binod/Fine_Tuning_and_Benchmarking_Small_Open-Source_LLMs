@@ -9,13 +9,13 @@
     "skipped": 724
   },
   "qa": {
-    "train": 701,
-    "test": 467,
-    "avg_tokens": 377.3,
-    "p95_tokens": 498,
-    "max_tokens": 512,
-    "max_seq_length": 562,
-    "skipped": 661
+    "train": 2113,
+    "test": 749,
+    "avg_tokens": 308.0,
+    "p95_tokens": 396,
+    "max_tokens": 506,
+    "max_seq_length": 460,
+    "skipped": 13
   },
   "summarization": {
     "train": 3000,

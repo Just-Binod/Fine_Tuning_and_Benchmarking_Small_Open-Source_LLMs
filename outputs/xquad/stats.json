@@ -1,5 +1,11 @@
 {
-  "train_size": 1351,
-  "test_size": 239,
-  "avg_answer_words": 151.5
+  "train_size": 2125,
+  "test_size": 375,
+  "sources": {
+    "textbooks-qa-nepali": 5186,
+    "health-qa-fixed": 1570
+  },
+  "avg_question_words": 22.2,
+  "avg_answer_words": 36.7,
+  "with_context": 2064
 }
