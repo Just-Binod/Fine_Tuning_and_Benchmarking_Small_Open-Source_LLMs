@@ -11,5 +11,5 @@
   "training_loss": 0.8874973999826532,
   "train_steps": 399,
   "hf_adapter": "iwasbinod/nepali-llama-qa-qlora",
-  "trained_at": "2026-05-30T15:05:17.039681"
+  "trained_at": "2026-05-30T19:29:09.249759"
 }
