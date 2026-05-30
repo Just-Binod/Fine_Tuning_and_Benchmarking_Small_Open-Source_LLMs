@@ -4,12 +4,12 @@
   "task": "qa",
   "eval_type": "fine_tuned",
   "scores": {
-    "f1": 11.89,
+    "f1": 13.36,
     "exact_match": 0.0
   },
   "n_evaluated": 100,
-  "training_loss": 0.7453560064311016,
+  "training_loss": 0.7452801319590786,
   "train_steps": 399,
-  "hf_adapter": "Just-Binod/nepali-mistral-qa-qlora",
-  "trained_at": "2026-05-30T03:40:14.126025"
+  "hf_adapter": "iwasbinod/nepali-mistral-qa-qlora",
+  "trained_at": "2026-05-30T10:39:39.509334"
 }
