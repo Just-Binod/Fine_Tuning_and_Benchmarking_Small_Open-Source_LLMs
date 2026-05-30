@@ -60,11 +60,11 @@ print(f"{'═'*55}\n")
 MODEL_CONFIGS = {
     "llama": {
         "model_name": "unsloth/Meta-Llama-3.1-8B-Instruct",
-        "hf_org":     "Just-Binod",
+        "hf_org":     "iwasbinod",
     },
     "mistral": {
         "model_name": "unsloth/mistral-7b-instruct-v0.3",
-        "hf_org":     "Just-Binod",
+        "hf_org":     "iwasbinod",
     },
 }
 
