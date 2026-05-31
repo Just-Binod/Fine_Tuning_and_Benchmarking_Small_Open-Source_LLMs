@@ -14,5 +14,5 @@
   "training_loss": 1.0706425514834665,
   "train_steps": 342,
   "hf_adapter": "iwasbinod/nepali-mistral-translation-qlora",
-  "trained_at": "2026-05-31T08:47:58.681410"
+  "trained_at": "2026-05-31T09:23:00.643417"
 }
