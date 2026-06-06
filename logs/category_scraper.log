@@ -1,0 +1,57 @@
+2026-06-04 10:34:45,276 [INFO] 
+═══════════════════════════════════════════════════════
+2026-06-04 10:34:45,276 [INFO]   Category Page Scraper
+2026-06-04 10:34:45,277 [INFO]   Target: 500-1000 Nepali news articles
+2026-06-04 10:34:45,277 [INFO] ═══════════════════════════════════════════════════════
+2026-06-04 10:34:45,277 [INFO] 
+──────────────────────────────────────────────────
+2026-06-04 10:34:45,277 [INFO]   Scraping: onlinekhabar
+2026-06-04 10:34:45,277 [INFO]   Fetching category: https://www.onlinekhabar.com/content/news
+2026-06-04 10:34:48,462 [INFO]     Found 213 article links
+2026-06-04 10:34:48,462 [INFO]   Fetching category: https://www.onlinekhabar.com/content/news?page=2
+2026-06-04 10:34:52,795 [INFO]     Found 213 article links
+2026-06-04 10:34:52,795 [INFO]   Fetching category: https://www.onlinekhabar.com/content/news?page=3
+2026-06-04 10:34:56,507 [INFO]     Found 213 article links
+2026-06-04 10:34:56,507 [INFO]   Fetching category: https://www.onlinekhabar.com/content/politics
+2026-06-04 10:34:58,891 [INFO]   Fetching category: https://www.onlinekhabar.com/content/economics
+2026-06-04 10:35:01,848 [INFO]   Total unique article URLs: 213
+2026-06-04 10:44:13,625 [INFO]   [onlinekhabar] 213 kept / 0 skipped
+2026-06-04 10:44:13,639 [INFO]   Raw   → outputs/news_scraped/raw/onlinekhabar_cat.jsonl
+2026-06-04 10:44:13,639 [INFO]   Clean → outputs/news_scraped/cleaned/onlinekhabar_cat.jsonl
+2026-06-04 10:44:13,639 [INFO] 
+──────────────────────────────────────────────────
+2026-06-04 10:44:13,639 [INFO]   Scraping: setopati
+2026-06-04 10:44:13,639 [INFO]   Fetching category: https://www.setopati.com/national
+2026-06-04 10:44:16,231 [INFO]   Fetching category: https://www.setopati.com/politics
+2026-06-04 10:44:19,018 [INFO]     Found 32 article links
+2026-06-04 10:44:19,018 [INFO]   Fetching category: https://www.setopati.com/economy
+2026-06-04 10:44:21,793 [INFO]     Found 32 article links
+2026-06-04 10:44:21,793 [INFO]   Fetching category: https://www.setopati.com/society
+2026-06-04 10:44:24,273 [INFO]   Total unique article URLs: 62
+2026-06-04 10:47:00,163 [INFO]   [setopati] 61 kept / 1 skipped
+2026-06-04 10:47:00,168 [INFO]   Raw   → outputs/news_scraped/raw/setopati_cat.jsonl
+2026-06-04 10:47:00,168 [INFO]   Clean → outputs/news_scraped/cleaned/setopati_cat.jsonl
+2026-06-04 10:47:00,168 [INFO] 
+──────────────────────────────────────────────────
+2026-06-04 10:47:00,168 [INFO]   Scraping: ratopati
+2026-06-04 10:47:00,168 [INFO]   Fetching category: https://ratopati.com/category/news
+2026-06-04 10:47:03,773 [INFO]     Found 118 article links
+2026-06-04 10:47:03,773 [INFO]   Fetching category: https://ratopati.com/category/politics
+2026-06-04 10:47:06,196 [INFO]   Fetching category: https://ratopati.com/category/business
+2026-06-04 10:47:09,137 [INFO]   Total unique article URLs: 118
+2026-06-04 10:52:26,510 [INFO]   [ratopati] 109 kept / 9 skipped
+2026-06-04 10:52:26,522 [INFO]   Raw   → outputs/news_scraped/raw/ratopati_cat.jsonl
+2026-06-04 10:52:26,522 [INFO]   Clean → outputs/news_scraped/cleaned/ratopati_cat.jsonl
+2026-06-04 10:52:26,523 [INFO] 
+Total articles (category + RSS): 383
+2026-06-04 10:52:26,545 [INFO] Saved 325 → outputs/news_scraped/train.jsonl
+2026-06-04 10:52:26,547 [INFO] Saved 58 → outputs/news_scraped/test.jsonl
+2026-06-04 10:52:26,547 [INFO] 
+── Sample ───────────────────────────────────
+2026-06-04 10:52:26,547 [INFO]   Headline : विद्युतमा भ्याटले उपभोक्ताको बिलमा २५ देखि सय रूपैयाँसम्म अतिरिक्त शुल
+2026-06-04 10:52:26,547 [INFO]   Body     : विद्युतमा भ्याटले उपभोक्ताको बिलमा २५ देखि सय रूपैयाँसम्म अतिरिक्त शुल्क मात्रै थपिन्छ: अर्थमन्त्री 
+2026-06-04 10:52:26,547 [INFO] 
+✓  Total  : 383
+2026-06-04 10:52:26,547 [INFO]    Train  : 325
+2026-06-04 10:52:26,547 [INFO]    Test   : 58
+2026-06-04 10:52:26,547 [INFO]    Sources: {'setopati': 61, 'onlinekhabar': 213, 'ratopati': 109}

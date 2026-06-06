@@ -1,0 +1,11 @@
+{
+  "total": 383,
+  "train": 325,
+  "test": 58,
+  "sources": {
+    "setopati": 61,
+    "onlinekhabar": 213,
+    "ratopati": 109
+  },
+  "scraped_at": "2026-06-04T10:52:26.547637"
+}
