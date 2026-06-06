@@ -4,11 +4,11 @@
   "task": "summarization",
   "eval_type": "fine_tuned",
   "scores": {
-    "rouge_l": 30.03
+    "rouge_l": 27.91
   },
   "n_evaluated": 100,
-  "training_loss": 0.7040346059816104,
+  "training_loss": 0.7037188338895216,
   "train_steps": 564,
   "hf_adapter": "iwasbinod/nepali-mistral-summarization-qlora",
-  "trained_at": "2026-06-06T18:21:17.794902"
+  "trained_at": "2026-06-06T22:26:00.132710"
 }
