@@ -1,100 +1,97 @@
 
-
 ```markdown
 # Fine-Tuning and Benchmarking Small Open-Source LLMs for Low-Resource Nepali NLP Tasks
 
-This repository contains the source code, dataset configurations, and evaluation pipelines used to fine-tune and benchmark 7-8B parameter open-source large language models (LLMs) for the Nepali language. 
+This repository provides an end-to-end framework for data ingestion, parameter-efficient fine-tuning (PEFT), and baseline benchmarking of 7-8B parameter large language models optimized for the Nepali language. 
 
-Using **Unsloth**, **QLoRA**, and **PEFT**, Llama and Mistral architectures were optimized across multiple downstream tasks, including text summarization, machine translation, and question answering (QA).
-
----
-
-## Model Registry (Hugging Face Adapters)
-
-All fine-tuned LoRA adapters resulting from these experiments are publicly hosted on Hugging Face under the profile `iwasbinod`.
-
-### Llama-Based Adapters
-* `iwasbinod/nepali-llama-summarization-news-scraped-data-qlora` - News summarization (scraped datasets)
-* `iwasbinod/nepali-llama-summarization-qlora` - General text summarization
-* `iwasbinod/nepali-llama-translation-qlora` - English-to-Nepali / Nepali-to-English translation
-* `iwasbinod/nepali-llama-qa-qlora` - Question answering and context extraction
-
-### Mistral-Based Adapters
-* `iwasbinod/nepali-mistral-summarization-news-scraped-data-qlora` - News summarization (scraped datasets)
-* `iwasbinod/nepali-mistral-summarization-qlora` - General text summarization
-* `iwasbinod/nepali-mistral-translation-qlora` - English-to-Nepali / Nepali-to-English translation
-* `iwasbinod/nepali-mistral-qa-qlora` - Question answering and context extraction
+By leveraging **Unsloth**, **QLoRA**, and **PEFT**, this project minimizes VRAM overhead while introducing domain-specific adaptations for Mistral and Llama architectures across critical NLP downstreams: Text Summarization, Machine Translation, and Question Answering (QA).
 
 ---
 
-## Setup and Installation
+## Model Matrix & Adapter Registry
 
-This project utilizes `uv` for lightning-fast environment setup and deterministic dependency tracking via `uv.lock` and `pyproject.toml`.
+All fine-tuned LoRA adapters are serialized and hosted on the Hugging Face Hub under the `iwasbinod` organization profile.
 
-### 1. Clone the Repository
+| Architecture | Target Downstream Task | Dataset Domain / Context | Hugging Face Hub Repository ID |
+| :--- | :--- | :--- | :--- |
+| **Llama (7B/8B)** | Text Summarization | Scraped News Datasets | [`iwasbinod/nepali-llama-summarization-news-scraped-data-qlora`](https://huggingface.co/iwasbinod/nepali-llama-summarization-news-scraped-data-qlora) |
+| **Llama (7B/8B)** | Text Summarization | General Text Corpus | [`iwasbinod/nepali-llama-summarization-qlora`](https://huggingface.co/iwasbinod/nepali-llama-summarization-qlora) |
+| **Llama (7B/8B)** | Machine Translation | English $\leftrightarrow$ Nepali | [`iwasbinod/nepali-llama-translation-qlora`](https://huggingface.co/iwasbinod/nepali-llama-translation-qlora) |
+| **Llama (7B/8B)** | Question Answering | Context-Grounded QA Pairs | [`iwasbinod/nepali-llama-qa-qlora`](https://huggingface.co/iwasbinod/nepali-llama-qa-qlora) |
+| **Mistral (7B)** | Text Summarization | Scraped News Datasets | [`iwasbinod/nepali-mistral-summarization-news-scraped-data-qlora`](https://huggingface.co/iwasbinod/nepali-mistral-summarization-news-scraped-data-qlora) |
+| **Mistral (7B)** | Text Summarization | General Text Corpus | [`iwasbinod/nepali-mistral-summarization-qlora`](https://huggingface.co/iwasbinod/nepali-mistral-summarization-qlora) |
+| **Mistral (7B)** | Machine Translation | English $\leftrightarrow$ Nepali | [`iwasbinod/nepali-mistral-translation-qlora`](https://huggingface.co/iwasbinod/nepali-mistral-translation-qlora) |
+| **Mistral (7B)** | Question Answering | Context-Grounded QA Pairs | [`iwasbinod/nepali-mistral-qa-qlora`](https://huggingface.co/iwasbinod/nepali-mistral-qa-qlora) |
+
+---
+
+## Installation & Environment Configuration
+
+This project enforces deterministic package management via `uv`. Ensure your host environment has `uv` installed before executing setup steps.
+
+### 1. Repository Initialization
 ```bash
 git clone [https://github.com/Just-Binod/Fine_Tuning_and_Benchmarking_Small_Open-Source_LLMs.git](https://github.com/Just-Binod/Fine_Tuning_and_Benchmarking_Small_Open-Source_LLMs.git)
 cd Fine_Tuning_and_Benchmarking_Small_Open-Source_LLMs
 
 ```
 
-### 2. Environment Setup
+### 2. Hermetic Virtual Environment Setup
 
-Create a virtual environment matching the repository's `.python-version` declaration and activate it:
+Initialize a localized python environment mapped to the native `.python-version` declaration:
 
 ```bash
 uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate  # OS X / Linux
+# On Windows use: .venv\Scripts\activate
 
 ```
 
-### 3. Install Dependencies
+### 3. Dependency Synchronization
 
-Sync the exact lockfile state to ensure reproducible environments:
+Instantiate exact project states using the lockfile:
 
 ```bash
 uv sync
 
 ```
 
-*Note: Ensure your local CUDA configuration aligns with Unsloth's execution kernels prior to training.*
+*Note: For GPU acceleration configurations, verify that your CUDA Toolkit version aligns closely with your Unsloth wheel specifications before starting the training runs.*
 
 ---
 
-## How to Reproduce
+## Execution & Pipeline Workflow
 
-### 1. Data Processing & Scraping
+### 1. Data Scraping & Preprocessing
 
-Raw data handling or scraping operations are initiated via:
+To invoke pipeline data ingestion routines or collect upstream corpus components:
 
 ```bash
 python scrap.py
 
 ```
 
-### 2. Fine-Tuning (QLoRA)
+### 2. Model Fine-Tuning Pipeline
 
-To start the training run using Unsloth and PEFT adapters, run the trainer script:
+Fine-tuning execution relies on Unsloth optimization kernels. Execute the QLoRA training loop with:
 
 ```bash
 python qlora_trainer.py
 
 ```
 
-*Parameters can be adjusted inside `qlora_trainer.py` to toggle between Mistral and Llama architectures.*
+### 3. Quantitative Evaluation & Benchmarking
 
-### 3. Evaluation & Benchmarking
-
-To benchmark the base models or your fine-tuned checkpoints against performance baselines:
+To run model checkpoints or base representations through validation suites (e.g., computing evaluation metrics across test splits):
 
 ```bash
 python baseline_eval.py
 
 ```
 
-### 4. Interactive UI
+### 4. Interactive User Interface
 
-A Streamlit interface is provided to interact with the models or view results dynamically:
+Launch the localized Streamlit web application dashboard to inspect outputs or query individual adapters in real time:
 
 ```bash
 streamlit run streamlit_app.py
@@ -103,29 +100,32 @@ streamlit run streamlit_app.py
 
 ---
 
-## Repository Structure
+## Directory Architecture
 
-As shown in `image_bf65a2.jpg`, the repository layout is structured as follows:
+The system file hierarchy follows the explicit blueprint captured in `image_bf65a2.jpg`:
 
 ```text
-├── data/               # Improved training datasets (e.g., textbook + health pairs)
-├── evaluation/         # Evaluator scripts, formatters, and metrics calculation
-├── logs/               # Streamlit application logs and run metadata
-├── outputs/            # Generated outputs and cached files
-├── results/            # Performance metrics for fine-tuned checkpoints
-├── .gitignore          # Git exclusion rules
-├── .python-version     # Target Python version file
-├── README.md           # Project overview and documentation
-├── baseline_eval.py    # Baseline evaluation execution pipeline
-├── main.py             # Principal project execution entry point
-├── pyproject.toml      # Project metadata and tool configuration declarations
-├── qlora_trainer.py    # Unsloth-accelerated QLoRA training loop script
-├── requirements.txt    # Fallback legacy pip dependency manifest
-├── scrap.py            # Data scraping and preprocessing utility
-├── streamlit_app.py    # Interactive Streamlit application
-└── uv.lock             # Deterministic package manager lockfile
+├── data/               # Localized data stores (Textbook parsing & Healthcare text pairs)
+├── evaluation/         # Performance evaluation routines, formatters, and metrics logic
+├── logs/               # Telemetry and application execution logs
+├── outputs/            # Mid-process serialization caches and artifacts
+├── results/            # Checkpoint performance metrics matrices
+├── .gitignore          # Version control file exclusion patterns
+├── .python-version     # Strictly enforced python runtime version specification
+├── README.md           # Core documentation file
+├── baseline_eval.py    # Main script for benchmarking baseline performance
+├── main.py             # System execution orchestration pipeline entrypoint
+├── pyproject.toml      # Modern tool configurations and metadata properties
+├── qlora_trainer.py    # Unsloth-accelerated QLoRA training configuration
+├── requirements.txt    # Legacy requirements specification manifest
+├── scrap.py            # Targeted upstream scraping and collection utility
+├── streamlit_app.py    # Streamlit presentation and interaction interface layer
+└── uv.lock             # Deterministic resolution lockfile for project dependencies
 
 ```
+
+---
+
 
 ```
 
