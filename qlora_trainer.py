@@ -96,8 +96,16 @@ TRAINING_CONFIG = {
 }
 
 model_cfg = MODEL_CONFIGS[MODEL]
+
+
 train_cfg = TRAINING_CONFIG[TASK]
 
+
+# Task-specific overrides
+if TASK == "translation":
+    train_cfg["num_epochs"] = 5
+    train_cfg["lr"] = 1.5e-4
+    train_cfg["max_seq_len"] = 512
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STEP 1 — LOAD MODEL
@@ -122,13 +130,37 @@ print(f"  Parameters: {sum(p.numel() for p in model.parameters())/1e9:.1f}B")
 # STEP 2 — ADD LORA ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# print("\nSTEP 2 — Adding LoRA adapters...")
+
+# model = FastLanguageModel.get_peft_model(
+#     model,
+#     r=16,
+#     lora_alpha=32,
+#     lora_dropout=0,           # 0 dropout — required for Unsloth fast path
+#     target_modules=[
+#         "q_proj", "k_proj", "v_proj", "o_proj",
+#         "gate_proj", "up_proj", "down_proj",
+#     ],
+#     bias="none",
+#     use_rslora=True,
+#     use_gradient_checkpointing="unsloth",
+# )
+
+# trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+# total     = sum(p.numel() for p in model.parameters())
+# print(f"  ✓ LoRA adapters added")
+# print(f"  Trainable : {trainable/1e6:.1f}M / {total/1e9:.1f}B ({100*trainable/total:.2f}%)")
+
+##
 print("\nSTEP 2 — Adding LoRA adapters...")
+
+lora_rank = 32 if TASK == "translation" else 16
 
 model = FastLanguageModel.get_peft_model(
     model,
-    r=16,
-    lora_alpha=32,
-    lora_dropout=0,           # 0 dropout — required for Unsloth fast path
+    r=lora_rank,
+    lora_alpha=lora_rank*2,
+    lora_dropout=0,
     target_modules=[
         "q_proj", "k_proj", "v_proj", "o_proj",
         "gate_proj", "up_proj", "down_proj",
@@ -140,8 +172,9 @@ model = FastLanguageModel.get_peft_model(
 
 trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
 total     = sum(p.numel() for p in model.parameters())
-print(f"  ✓ LoRA adapters added")
+print(f"   LoRA adapters added (r={lora_rank})")
 print(f"  Trainable : {trainable/1e6:.1f}M / {total/1e9:.1f}B ({100*trainable/total:.2f}%)")
+##
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -267,23 +300,63 @@ REF_FIELDS = {
     "summarization": "summary",
 }
 
+# SYSTEM_PROMPTS = {
+#     "translation":   "You are a helpful assistant that translates Nepali text to English accurately. Provide only the translation, nothing else.",
+#     "qa":            "You are a helpful assistant that answers questions in Nepali based only on the provided context. Be concise and accurate.",
+#     "summarization": "You are a helpful assistant that summarizes Nepali news articles in one or two sentences. Write the summary in Nepali.",
+# }
+
 SYSTEM_PROMPTS = {
-    "translation":   "You are a helpful assistant that translates Nepali text to English accurately. Provide only the translation, nothing else.",
-    "qa":            "You are a helpful assistant that answers questions in Nepali based only on the provided context. Be concise and accurate.",
-    "summarization": "You are a helpful assistant that summarizes Nepali news articles in one or two sentences. Write the summary in Nepali.",
+    "translation": """You are a professional Nepali-English translator.
+Translate the given Nepali text into natural, fluent, and accurate English.
+Preserve the original meaning exactly. Use natural English expressions. 
+Do not add any extra information, explanations, or notes. Output only the translation.""",
+
+    "qa": """You are an accurate and concise assistant. 
+Answer the question in Nepali based **only** on the provided context. 
+If the answer is not in the context, say "माफ गर्नुहोस्, दिइएको सन्दर्भमा यो प्रश्नको जवाफ उपलब्ध छैन।"
+Do not make up information.""",
+
+    "summarization": """You are an expert Nepali news summarizer.
+Summarize the given Nepali news article in **1 to 2 clear and concise sentences** in Nepali.
+Capture the main points and key information. Do not add your own opinions."""
 }
+
+# def build_user_message(task, ex):
+#     if task == "translation":
+#         return f"Translate the following Nepali text to English.\n\nNepali:\n{ex['source']}"
+#     elif task == "qa":
+#         ctx = ex.get("context","")
+#         q   = ex.get("question","")
+#         if ctx:
+#             return f"Read the following context carefully and answer the question.\n\nContext:\n{ctx}\n\nQuestion:\n{q}"
+#         return f"Answer the following question in Nepali.\n\nQuestion:\n{q}"
+#     elif task == "summarization":
+#         return f"Summarize the following Nepali news article in one or two sentences.\n\nArticle:\n{ex['article']}"
+
+
+##
 
 def build_user_message(task, ex):
     if task == "translation":
-        return f"Translate the following Nepali text to English.\n\nNepali:\n{ex['source']}"
+        return f"""Translate the following Nepali text to natural, fluent English.
+
+Nepali:
+{ex['source']}
+
+English:"""
+    
     elif task == "qa":
         ctx = ex.get("context","")
         q   = ex.get("question","")
         if ctx:
             return f"Read the following context carefully and answer the question.\n\nContext:\n{ctx}\n\nQuestion:\n{q}"
         return f"Answer the following question in Nepali.\n\nQuestion:\n{q}"
+    
     elif task == "summarization":
         return f"Summarize the following Nepali news article in one or two sentences.\n\nArticle:\n{ex['article']}"
+##
+
 
 test_data = load_jsonl(TEST_PATHS[TASK])
 random.seed(42)
@@ -306,13 +379,29 @@ for ex in tqdm(test_data, desc=f"  {TASK}"):
             truncation=True, max_length=train_cfg["max_seq_len"]
         ).to(model.device)
 
+        # with torch.no_grad():
+        #     outputs = model.generate(
+        #         **inputs,
+        #         max_new_tokens=128,
+        #         do_sample=False,
+        #         pad_token_id=tokenizer.eos_token_id,
+        #     )
+
+        ##
+        # 
         with torch.no_grad():
-            outputs = model.generate(
+                outputs = model.generate(
                 **inputs,
-                max_new_tokens=128,
-                do_sample=False,
+                max_new_tokens=256,      # Increased
+                temperature=0.3,
+                top_p=0.9,
+                do_sample=True,
+                repetition_penalty=1.1,
                 pad_token_id=tokenizer.eos_token_id,
             )
+
+
+        ##
 
         new_tokens = outputs[0][inputs["input_ids"].shape[1]:]
         response   = tokenizer.decode(new_tokens, skip_special_tokens=True)
