@@ -4,15 +4,15 @@
   "task": "translation",
   "eval_type": "fine_tuned",
   "scores": {
-    "bleu": 29.29,
-    "bleu_1": 53.78,
-    "bleu_2": 36.96,
-    "bleu_3": 28.42,
-    "bleu_4": 24.11
+    "bleu": 29.61,
+    "bleu_1": 50.47,
+    "bleu_2": 33.74,
+    "bleu_3": 24.6,
+    "bleu_4": 18.36
   },
   "n_evaluated": 100,
-  "training_loss": 0.46630994949424476,
-  "train_steps": 342,
+  "training_loss": 0.33678627808888756,
+  "train_steps": 570,
   "hf_adapter": "iwasbinod/nepali-llama-translation-qlora",
-  "trained_at": "2026-06-06T05:35:44.929614"
+  "trained_at": "2026-06-23T13:29:40.017042"
 }
