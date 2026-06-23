@@ -1,13 +1,19 @@
+
+
 """
 qlora_trainer.py
 ----------------
 QLoRA fine-tuning for Nepali NLP tasks using Unsloth.
 
-FIXES IN THIS VERSION:
+VERSION NOTES:
   - Uses UnslothTrainer instead of SFTTrainer (fixes AttributeError mean)
-  - Removed warmup_ratio (deprecated) → uses warmup_steps instead
+  - Removed warmup_ratio (deprecated) -> uses warmup_steps instead
   - Removed logging_dir (deprecated)
   - Compatible with Unsloth 2026.x + Transformers 5.x
+  - Translation task uses larger LoRA rank (32) + longer context (512) for
+    better quality, with batch_size/grad_accum rebalanced to avoid OOM
+  - expandable_segments + cache clearing added to prevent CUDA OOM /
+    fragmentation on ~15GB GPUs (T4-class)
 
 HOW TO USE ON KAGGLE:
   Cell 1: !pip install -q unsloth transformers datasets trl
@@ -30,8 +36,12 @@ HOW TO USE ON KAGGLE:
 """
 
 import os
+# Must be set before torch initializes CUDA — reduces OOM from fragmentation
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 import sys
 import json
+import gc
 import torch
 import random
 from pathlib import Path
@@ -44,9 +54,9 @@ from evaluation.metrics import compute_metrics
 Path("results").mkdir(exist_ok=True)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 # CONFIG
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 
 if "MODEL" not in dir(): MODEL = "llama"
 if "TASK"  not in dir(): TASK  = "translation"
@@ -96,20 +106,24 @@ TRAINING_CONFIG = {
 }
 
 model_cfg = MODEL_CONFIGS[MODEL]
-
-
 train_cfg = TRAINING_CONFIG[TASK]
 
-
-# Task-specific overrides
+# Task-specific overrides.
+# Translation gets a bigger LoRA rank + longer context for better quality.
+# Both increase activation/gradient memory, so batch_size is cut and
+# grad_accum raised to keep the same effective batch size (16) without OOM.
 if TASK == "translation":
-    train_cfg["num_epochs"] = 5
-    train_cfg["lr"] = 1.5e-4
+    train_cfg["num_epochs"]  = 5
+    train_cfg["lr"]          = 1.5e-4
     train_cfg["max_seq_len"] = 512
+    train_cfg["batch_size"]  = 2
+    train_cfg["grad_accum"]  = 8
 
-# ═══════════════════════════════════════════════════════════════════════════════
+LORA_RANK = 32 if TASK == "translation" else 16
+
+# 
 # STEP 1 — LOAD MODEL
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 
 print("STEP 1 — Loading base model...")
 
@@ -126,41 +140,17 @@ print(f"  ✓ Base model loaded")
 print(f"  Parameters: {sum(p.numel() for p in model.parameters())/1e9:.1f}B")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 # STEP 2 — ADD LORA ADAPTERS
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 
-# print("\nSTEP 2 — Adding LoRA adapters...")
-
-# model = FastLanguageModel.get_peft_model(
-#     model,
-#     r=16,
-#     lora_alpha=32,
-#     lora_dropout=0,           # 0 dropout — required for Unsloth fast path
-#     target_modules=[
-#         "q_proj", "k_proj", "v_proj", "o_proj",
-#         "gate_proj", "up_proj", "down_proj",
-#     ],
-#     bias="none",
-#     use_rslora=True,
-#     use_gradient_checkpointing="unsloth",
-# )
-
-# trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
-# total     = sum(p.numel() for p in model.parameters())
-# print(f"  ✓ LoRA adapters added")
-# print(f"  Trainable : {trainable/1e6:.1f}M / {total/1e9:.1f}B ({100*trainable/total:.2f}%)")
-
-##
 print("\nSTEP 2 — Adding LoRA adapters...")
-
-lora_rank = 32 if TASK == "translation" else 16
 
 model = FastLanguageModel.get_peft_model(
     model,
-    r=lora_rank,
-    lora_alpha=lora_rank*2,
-    lora_dropout=0,
+    r=LORA_RANK,
+    lora_alpha=LORA_RANK * 2,
+    lora_dropout=0,           # 0 dropout — required for Unsloth fast path
     target_modules=[
         "q_proj", "k_proj", "v_proj", "o_proj",
         "gate_proj", "up_proj", "down_proj",
@@ -172,14 +162,13 @@ model = FastLanguageModel.get_peft_model(
 
 trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
 total     = sum(p.numel() for p in model.parameters())
-print(f"   LoRA adapters added (r={lora_rank})")
+print(f"  ✓ LoRA adapters added (r={LORA_RANK})")
 print(f"  Trainable : {trainable/1e6:.1f}M / {total/1e9:.1f}B ({100*trainable/total:.2f}%)")
-##
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 # STEP 3 — LOAD DATASET
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 
 print(f"\nSTEP 3 — Loading {TASK} training data...")
 
@@ -214,9 +203,9 @@ print(f"  ✓ Formatted")
 print(f"  Sample: {dataset[0]['text'][:150].replace(chr(10),' ')}")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 # STEP 4 — TRAIN
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 
 print(f"\nSTEP 4 — Training...")
 print(f"  Epochs      : {train_cfg['num_epochs']}")
@@ -280,11 +269,18 @@ print(f"  Steps      : {train_result.global_step}")
 print(f"  Time       : {train_result.metrics.get('train_runtime',0)/60:.1f} min")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 # STEP 5 — EVALUATE
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 
 print(f"\nSTEP 5 — Evaluating on test set...")
+
+# Free memory left over from training (optimizer states, gradients, cached
+# activations) before switching to inference mode — prevents OOM/fragmentation
+# carrying over into the generation loop below.
+del trainer
+gc.collect()
+torch.cuda.empty_cache()
 
 FastLanguageModel.for_inference(model)
 
@@ -300,42 +296,21 @@ REF_FIELDS = {
     "summarization": "summary",
 }
 
-# SYSTEM_PROMPTS = {
-#     "translation":   "You are a helpful assistant that translates Nepali text to English accurately. Provide only the translation, nothing else.",
-#     "qa":            "You are a helpful assistant that answers questions in Nepali based only on the provided context. Be concise and accurate.",
-#     "summarization": "You are a helpful assistant that summarizes Nepali news articles in one or two sentences. Write the summary in Nepali.",
-# }
-
 SYSTEM_PROMPTS = {
     "translation": """You are a professional Nepali-English translator.
 Translate the given Nepali text into natural, fluent, and accurate English.
-Preserve the original meaning exactly. Use natural English expressions. 
+Preserve the original meaning exactly. Use natural English expressions.
 Do not add any extra information, explanations, or notes. Output only the translation.""",
 
-    "qa": """You are an accurate and concise assistant. 
-Answer the question in Nepali based **only** on the provided context. 
+    "qa": """You are an accurate and concise assistant.
+Answer the question in Nepali based **only** on the provided context.
 If the answer is not in the context, say "माफ गर्नुहोस्, दिइएको सन्दर्भमा यो प्रश्नको जवाफ उपलब्ध छैन।"
 Do not make up information.""",
 
     "summarization": """You are an expert Nepali news summarizer.
 Summarize the given Nepali news article in **1 to 2 clear and concise sentences** in Nepali.
-Capture the main points and key information. Do not add your own opinions."""
+Capture the main points and key information. Do not add your own opinions.""",
 }
-
-# def build_user_message(task, ex):
-#     if task == "translation":
-#         return f"Translate the following Nepali text to English.\n\nNepali:\n{ex['source']}"
-#     elif task == "qa":
-#         ctx = ex.get("context","")
-#         q   = ex.get("question","")
-#         if ctx:
-#             return f"Read the following context carefully and answer the question.\n\nContext:\n{ctx}\n\nQuestion:\n{q}"
-#         return f"Answer the following question in Nepali.\n\nQuestion:\n{q}"
-#     elif task == "summarization":
-#         return f"Summarize the following Nepali news article in one or two sentences.\n\nArticle:\n{ex['article']}"
-
-
-##
 
 def build_user_message(task, ex):
     if task == "translation":
@@ -345,17 +320,14 @@ Nepali:
 {ex['source']}
 
 English:"""
-    
     elif task == "qa":
-        ctx = ex.get("context","")
-        q   = ex.get("question","")
+        ctx = ex.get("context", "")
+        q   = ex.get("question", "")
         if ctx:
             return f"Read the following context carefully and answer the question.\n\nContext:\n{ctx}\n\nQuestion:\n{q}"
         return f"Answer the following question in Nepali.\n\nQuestion:\n{q}"
-    
     elif task == "summarization":
         return f"Summarize the following Nepali news article in one or two sentences.\n\nArticle:\n{ex['article']}"
-##
 
 
 test_data = load_jsonl(TEST_PATHS[TASK])
@@ -365,7 +337,7 @@ test_data = test_data[:100]
 
 predictions, references = [], []
 
-for ex in tqdm(test_data, desc=f"  {TASK}"):
+for idx, ex in enumerate(tqdm(test_data, desc=f"  {TASK}")):
     try:
         messages = [
             {"role": "system", "content": SYSTEM_PROMPTS[TASK]},
@@ -379,29 +351,20 @@ for ex in tqdm(test_data, desc=f"  {TASK}"):
             truncation=True, max_length=train_cfg["max_seq_len"]
         ).to(model.device)
 
-        # with torch.no_grad():
-        #     outputs = model.generate(
-        #         **inputs,
-        #         max_new_tokens=128,
-        #         do_sample=False,
-        #         pad_token_id=tokenizer.eos_token_id,
-        #     )
-
-        ##
-        # 
         with torch.no_grad():
-                outputs = model.generate(
+            outputs = model.generate(
                 **inputs,
-                max_new_tokens=256,      # Increased
+                #max_new_tokens=256,
+                #############
+                max_new_tokens=128,
+
+                ############
                 temperature=0.3,
                 top_p=0.9,
                 do_sample=True,
                 repetition_penalty=1.1,
                 pad_token_id=tokenizer.eos_token_id,
             )
-
-
-        ##
 
         new_tokens = outputs[0][inputs["input_ids"].shape[1]:]
         response   = tokenizer.decode(new_tokens, skip_special_tokens=True)
@@ -410,13 +373,18 @@ for ex in tqdm(test_data, desc=f"  {TASK}"):
             if stop in response:
                 response = response[:response.index(stop)]
 
-        ref = ex.get(REF_FIELDS[TASK],"").strip()
+        ref = ex.get(REF_FIELDS[TASK], "").strip()
         if response.strip() and ref:
             predictions.append(response.strip())
             references.append(ref)
 
-    except Exception as e:
+    except Exception:
         continue
+
+    # Periodically clear cache to prevent fragmentation buildup over many
+    # generate() calls.
+    if (idx + 1) % 20 == 0:
+        torch.cuda.empty_cache()
 
 scores = compute_metrics(TASK, predictions, references)
 print(f"\n  ✓ Fine-tuned scores : {scores}")
@@ -429,9 +397,9 @@ for i, (p, r) in enumerate(zip(predictions[:3], references[:3])):
     print()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 # STEP 6 — SAVE TO HUGGINGFACE
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 
 print(f"\nSTEP 6 — Saving adapter to HuggingFace Hub...")
 
@@ -443,15 +411,15 @@ tokenizer.save_pretrained(output_dir)
 try:
     model.push_to_hub(hf_repo)
     tokenizer.push_to_hub(hf_repo)
-    print(f"  ✓ Uploaded → huggingface.co/{hf_repo}")
+    print(f"   Uploaded → huggingface.co/{hf_repo}")
 except Exception as e:
     print(f"  Upload failed: {e}")
     print(f"  Adapter saved locally → {output_dir}")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 # STEP 7 — SAVE RESULTS + COMPARE WITH BASELINE
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
 
 print(f"\nSTEP 7 — Saving results...")
 
@@ -475,14 +443,14 @@ with open(result_path, "w", encoding="utf-8") as f:
 print(f"  ✓ Results → {result_path}")
 
 # compare with baseline
-METRIC_MAP = {"translation":"bleu", "qa":"f1", "summarization":"rouge_l"}
+METRIC_MAP = {"translation": "bleu", "qa": "f1", "summarization": "rouge_l"}
 metric = METRIC_MAP[TASK]
 
 baseline_path = f"results/baseline_{MODEL}.json"
 if Path(baseline_path).exists():
     with open(baseline_path) as f:
         baseline = json.load(f)
-    before = baseline.get("tasks",{}).get(TASK,{}).get("scores",{}).get(metric,"N/A")
+    before = baseline.get("tasks", {}).get(TASK, {}).get("scores", {}).get(metric, "N/A")
     after  = scores.get(metric, "N/A")
 
     print(f"\n{'─'*50}")
@@ -491,7 +459,7 @@ if Path(baseline_path).exists():
     print(f"  Metric             : {metric}")
     print(f"  Before (zero-shot) : {before}")
     print(f"  After  (fine-tuned): {after}")
-    if isinstance(before,(int,float)) and isinstance(after,(int,float)) and before > 0:
+    if isinstance(before, (int, float)) and isinstance(after, (int, float)) and before > 0:
         print(f"  Improvement        : +{after-before:.2f} ({(after-before)/before*100:.0f}%)")
 
 print(f"\n{'═'*55}")
@@ -499,13 +467,3 @@ print(f"  DONE: {MODEL.upper()} + {TASK.upper()}")
 print(f"  Adapter : huggingface.co/{hf_repo}")
 print(f"  Results : {result_path}")
 print(f"{'═'*55}")
-
-# print(f"""
-#   Push results to GitHub:
-#   import os
-#   from kaggle_secrets import UserSecretsClient
-#   GITHUB_TOKEN = UserSecretsClient().get_secret("GITHUB_TOKEN")
-#   os.system('git add results/ outputs/trained/')
-#   os.system('git commit -m "results: finetuned {MODEL} {TASK}"')
-#   os.system(f'git push https://Just-Binod:{{GITHUB_TOKEN}}@github.com/Just-Binod/Fine_Tuning_and_Benchmarking_Small_Open-Source_LLMs.git main')
-# """)
