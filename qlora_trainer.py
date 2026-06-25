@@ -308,9 +308,16 @@ Answer the question in Nepali based **only** on the provided context.
 If the answer is not in the context, say "माफ गर्नुहोस्, दिइएको सन्दर्भमा यो प्रश्नको जवाफ उपलब्ध छैन।"
 Do not make up information.""",
 
-    "summarization": """You are an expert Nepali news summarizer.
-Summarize the given Nepali news article in **1 to 2 clear and concise sentences** in Nepali.
-Capture the main points and key information. Do not add your own opinions.""",
+#     "summarization": """You are an expert Nepali news summarizer.
+# Summarize the given Nepali news article in **1 to 2 clear and concise sentences** in Nepali.
+# Capture the main points and key information. Do not add your own opinions.""",
+
+
+"summarization": """You are an expert Nepali news summarizer.
+Summarize the given Nepali news article in **exactly 1 to 2 clear, complete sentences** in Nepali. 
+Aim for 40-80 words total. Capture the main event, key facts, and impact. 
+Do not add opinions or extra text. Write in natural, fluent Nepali.""",
+
 }
 
 def build_user_message(task, ex):
@@ -328,7 +335,13 @@ English:"""
             return f"Read the following context carefully and answer the question.\n\nContext:\n{ctx}\n\nQuestion:\n{q}"
         return f"Answer the following question in Nepali.\n\nQuestion:\n{q}"
     elif task == "summarization":
-        return f"Summarize the following Nepali news article in one or two sentences.\n\nArticle:\n{ex['article']}"
+        # return f"Summarize the following Nepali news article in one or two sentences.\n\nArticle:\n{ex['article']}"
+        return f"""Summarize the following Nepali news article in **1 to 2 complete sentences** (40-80 words).
+
+Article:
+{ex['article']}
+
+Summary:"""
 
 
 test_data = load_jsonl(TEST_PATHS[TASK])
@@ -355,17 +368,33 @@ for idx, ex in enumerate(tqdm(test_data, desc=f"  {TASK}")):
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
-                #max_new_tokens=256,
+                max_new_tokens=256,
+                min_new_tokens=40,     
                 #############
-                max_new_tokens=128,
+                #max_new_tokens=128,
 
                 ############
-                temperature=0.3,
-                top_p=0.9,
+                temperature=0.40,
+                top_p=0.95,
                 do_sample=True,
-                repetition_penalty=1.1,
+                repetition_penalty=1.05,
                 pad_token_id=tokenizer.eos_token_id,
             )
+
+
+
+
+#             outputs = model.generate(
+#                  **inputs,
+#             max_new_tokens=256,      # Increased
+#             min_new_tokens=50,       # Important - prevents too short
+#             temperature=0.45,
+#             top_p=0.92,
+#             do_sample=True,
+#             repetition_penalty=1.08,
+#             pad_token_id=tokenizer.eos_token_id,
+# )
+   
 
         new_tokens = outputs[0][inputs["input_ids"].shape[1]:]
         response   = tokenizer.decode(new_tokens, skip_special_tokens=True)
@@ -388,7 +417,7 @@ for idx, ex in enumerate(tqdm(test_data, desc=f"  {TASK}")):
         torch.cuda.empty_cache()
 
 scores = compute_metrics(TASK, predictions, references)
-print(f"\n  ✓ Fine-tuned scores : {scores}")
+print(f"\n   Fine-tuned scores : {scores}")
 print(f"  Evaluated {len(predictions)}/100 examples")
 
 print(f"\n  Sample predictions:")
