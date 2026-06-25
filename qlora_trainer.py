@@ -136,7 +136,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     dtype=None,
 )
 
-print(f"  ✓ Base model loaded")
+print(f"   Base model loaded")
 print(f"  Parameters: {sum(p.numel() for p in model.parameters())/1e9:.1f}B")
 
 
@@ -144,13 +144,13 @@ print(f"  Parameters: {sum(p.numel() for p in model.parameters())/1e9:.1f}B")
 # STEP 2 — ADD LORA ADAPTERS
 # 
 
-print("\nSTEP 2 — Adding LoRA adapters...")
+print("\nSTEP 2 - Adding LoRA adapters...")
 
 model = FastLanguageModel.get_peft_model(
     model,
     r=LORA_RANK,
     lora_alpha=LORA_RANK * 2,
-    lora_dropout=0,           # 0 dropout — required for Unsloth fast path
+    lora_dropout=0,           # 0 dropout - required for Unsloth fast path
     target_modules=[
         "q_proj", "k_proj", "v_proj", "o_proj",
         "gate_proj", "up_proj", "down_proj",
@@ -162,7 +162,7 @@ model = FastLanguageModel.get_peft_model(
 
 trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
 total     = sum(p.numel() for p in model.parameters())
-print(f"  ✓ LoRA adapters added (r={LORA_RANK})")
+print(f"   LoRA adapters added (r={LORA_RANK})")
 print(f"  Trainable : {trainable/1e6:.1f}M / {total/1e9:.1f}B ({100*trainable/total:.2f}%)")
 
 
@@ -170,14 +170,15 @@ print(f"  Trainable : {trainable/1e6:.1f}M / {total/1e9:.1f}B ({100*trainable/to
 # STEP 3 — LOAD DATASET
 # 
 
-print(f"\nSTEP 3 — Loading {TASK} training data...")
+print(f"\nSTEP 3 - Loading {TASK} training data...")
 
 from datasets import Dataset
 
 TASK_PATHS = {
     "translation":   "outputs/formatted/translation/train.jsonl",
     "qa":            "outputs/formatted/qa/train.jsonl",
-    "summarization": "outputs/formatted/summarization/train.jsonl",
+    # "summarization": "outputs/formatted/summarization/train.jsonl",
+    "summarization": "outputs/news_scraped/train_fixed_v2.jsonl",
 }
 
 def load_jsonl(path):
@@ -199,15 +200,15 @@ def format_sample(example):
 dataset = Dataset.from_list(raw_data)
 dataset = dataset.map(format_sample, desc="Applying chat template")
 
-print(f"  ✓ Formatted")
+print(f"   Formatted")
 print(f"  Sample: {dataset[0]['text'][:150].replace(chr(10),' ')}")
 
 
 # 
-# STEP 4 — TRAIN
+# STEP 4  TRAIN 
 # 
 
-print(f"\nSTEP 4 — Training...")
+print(f"\nSTEP 4 Training...")
 print(f"  Epochs      : {train_cfg['num_epochs']}")
 print(f"  Batch size  : {train_cfg['batch_size']} × {train_cfg['grad_accum']} = {train_cfg['batch_size']*train_cfg['grad_accum']} effective")
 print(f"  LR          : {train_cfg['lr']}")

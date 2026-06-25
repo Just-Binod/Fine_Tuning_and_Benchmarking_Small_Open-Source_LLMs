@@ -60,6 +60,7 @@ dependencies = [
     "transformers==5.8.1",
     "typer==0.25.1",
     "typing-extensions==4.15.0",
+    "unsloth>=2024.8",
     "urllib3==2.7.0",
     "xxhash==3.7.0",
     "yarl==1.23.0",

@@ -518,6 +518,7 @@ dependencies = [
     { name = "transformers" },
     { name = "typer" },
     { name = "typing-extensions" },
+    { name = "unsloth" },
     { name = "urllib3" },
     { name = "xxhash" },
     { name = "yarl" },
@@ -580,6 +581,7 @@ requires-dist = [
     { name = "transformers", specifier = "==5.8.1" },
     { name = "typer", specifier = "==0.25.1" },
     { name = "typing-extensions", specifier = "==4.15.0" },
+    { name = "unsloth", specifier = ">=2024.8" },
     { name = "urllib3", specifier = "==2.7.0" },
     { name = "xxhash", specifier = "==3.7.0" },
     { name = "yarl", specifier = "==1.23.0" },
@@ -2117,6 +2119,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ba/19/1b9b0e29f30c6d35cb345486df41110984ea67ae69dddbc0e8a100999493/tzdata-2026.2.tar.gz", hash = "sha256:9173fde7d80d9018e02a662e168e5a2d04f87c41ea174b139fbef642eda62d10", size = 198254, upload-time = "2026-04-24T15:22:08.651Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ce/e4/dccd7f47c4b64213ac01ef921a1337ee6e30e8c6466046018326977efd95/tzdata-2026.2-py2.py3-none-any.whl", hash = "sha256:bbe9af844f658da81a5f95019480da3a89415801f6cc966806612cc7169bffe7", size = 349321, upload-time = "2026-04-24T15:22:05.876Z" },
+]
+
+[[package]]
+name = "unsloth"
+version = "2024.8"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9d/98/57bdb80e3c935280417e59d20146243437fd5230306a4fbbf185d4d7d015/unsloth-2024.8.tar.gz", hash = "sha256:20f555588d16811a2e585636551bd31fde526b92d5f336b8501d9dc8daa47f8d", size = 2710338, upload-time = "2024-08-04T18:30:15.109Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ef/db/06d70295c863a245a46dd8423135133d77537d513420b5558dfa8f9f5cac/unsloth-2024.8-py3-none-any.whl", hash = "sha256:da2ee4de96a10b7489723dc5d3c6a2ef383774f7cf249abe44919c615ae8df49", size = 136628, upload-time = "2024-08-04T18:30:12.985Z" },
 ]
 
 [[package]]
