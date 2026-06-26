@@ -280,6 +280,12 @@ def load_jsonl(path):
 raw_data = load_jsonl(TASK_PATHS[TASK])
 print(f"  Loaded {len(raw_data)} examples")
 
+
+##
+
+print("\n RAW TRAINING DATA CHECK (First Example):")
+print(json.dumps(raw_data[0], indent=2, ensure_ascii=False))
+
 # apply chat template — converts messages → model specific tokens
 def format_sample(example):
     text = tokenizer.apply_chat_template(
