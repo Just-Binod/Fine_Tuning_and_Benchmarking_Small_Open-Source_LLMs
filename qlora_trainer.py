@@ -106,32 +106,65 @@ MODEL_CONFIGS = {
 # }
 
 
+# TRAINING_CONFIG = {
+#     "translation": {
+#         "num_epochs":    4,          # Increased to help pick up nuanced language structures
+#         "batch_size":    2,          # Reduced batch to match QA/Summarization memory profiles
+#         "grad_accum":    8,          # Rebalanced: 2 x 8 = 16 effective batch size
+#         "lr":            2e-4,
+#         "max_seq_len":   1024,       # CRITICAL: Raised from 256/512 to prevent clipping
+#         "warmup_steps":  50,         # More steps for smoother gradient stability
+#     },
+#     "qa": {
+#         "num_epochs":    4,
+#         "batch_size":    2,
+#         "grad_accum":    8,
+#         "lr":            2e-4,
+#         "max_seq_len":   1024,       # CRITICAL: Ensures long context paragraphs fit comfortably
+#         "warmup_steps":  50,
+#     },
+#     "summarization": {
+#         "num_epochs":    4,
+#         "batch_size":    2,
+#         "grad_accum":    8,
+#         "lr":            2e-4,
+#         "max_seq_len":   1024,       # CRITICAL: Fits full source news articles easily
+#         "warmup_steps":  50,
+#     },
+# }
+
+###
 TRAINING_CONFIG = {
     "translation": {
-        "num_epochs":    4,          # Increased to help pick up nuanced language structures
-        "batch_size":    2,          # Reduced batch to match QA/Summarization memory profiles
-        "grad_accum":    8,          # Rebalanced: 2 x 8 = 16 effective batch size
-        "lr":            2e-4,
-        "max_seq_len":   1024,       # CRITICAL: Raised from 256/512 to prevent clipping
-        "warmup_steps":  50,         # More steps for smoother gradient stability
+        "num_epochs":    3,
+        "batch_size":    2,
+        "grad_accum":    8,
+        "lr":            1e-4,          # Lower = safer, less forgetting
+        "max_seq_len":   512,
+        "warmup_steps":  40,
     },
     "qa": {
-        "num_epochs":    4,
+        "num_epochs":    3,
         "batch_size":    2,
         "grad_accum":    8,
-        "lr":            2e-4,
-        "max_seq_len":   1024,       # CRITICAL: Ensures long context paragraphs fit comfortably
-        "warmup_steps":  50,
+        "lr":            1e-4,
+        "max_seq_len":   512,
+        "warmup_steps":  40,
     },
     "summarization": {
-        "num_epochs":    4,
+        "num_epochs":    3,
         "batch_size":    2,
         "grad_accum":    8,
-        "lr":            2e-4,
-        "max_seq_len":   1024,       # CRITICAL: Fits full source news articles easily
-        "warmup_steps":  50,
+        "lr":            1e-4,
+        "max_seq_len":   512,
+        "warmup_steps":  40,
     },
 }
+
+# Task-specific LoRA rank
+LORA_RANK = 24 if TASK == "translation" else 16
+###
+
 
 # model_cfg = MODEL_CONFIGS[MODEL]
 # train_cfg = TRAINING_CONFIG[TASK]
@@ -241,6 +274,14 @@ def format_sample(example):
 
 dataset = Dataset.from_list(raw_data)
 dataset = dataset.map(format_sample, desc="Applying chat template")
+
+###
+print("\n=== TRAINING DATA QUALITY CHECK ===")
+sample = dataset[0]['text']
+print(sample[:1200])  # First full example
+print("\n--- Last 300 chars (should contain assistant response) ---")
+print(sample[-300:])
+###
 
 print(f"   Formatted")
 print(f"  Sample: {dataset[0]['text'][:150].replace(chr(10),' ')}")
@@ -423,17 +464,29 @@ for idx, ex in enumerate(tqdm(test_data, desc=f"  {TASK}")):
 
         with torch.no_grad():
             # Inside the evaluation loop
+            # with torch.no_grad():
             outputs = model.generate(
                 **inputs,
-                max_new_tokens=256,       # Plenty of space for summaries/translations/answers
-                min_new_tokens=15,        # Low baseline to avoid forced filler words
-                temperature=0.3,          # Lowered from 0.7 to prevent structural hallucinations/repetition
-                top_p=0.9,
+                max_new_tokens=512,
+                min_new_tokens=30,           # Allow decent length
+                temperature=0.7,             # Better creativity + fluency
+                top_p=0.92,
                 do_sample=True,
-                repetition_penalty=1.15,  # Slightly boosted to suppress looped strings
-                pad_token_id=tokenizer.eos_token_id,
+                repetition_penalty=1.08,     # Mild
                 eos_token_id=tokenizer.eos_token_id,
+                pad_token_id=tokenizer.eos_token_id,
             )
+            # outputs = model.generate(
+            #     **inputs,
+            #     max_new_tokens=256,       # Plenty of space for summaries/translations/answers
+            #     min_new_tokens=15,        # Low baseline to avoid forced filler words
+            #     temperature=0.3,          # Lowered from 0.7 to prevent structural hallucinations/repetition
+            #     top_p=0.9,
+            #     do_sample=True,
+            #     repetition_penalty=1.15,  # Slightly boosted to suppress looped strings
+            #     pad_token_id=tokenizer.eos_token_id,
+            #     eos_token_id=tokenizer.eos_token_id,
+            # )
             # outputs = model.generate(
             #     **inputs,
             #     max_new_tokens=512,      # Much higher
@@ -482,15 +535,36 @@ for idx, ex in enumerate(tqdm(test_data, desc=f"  {TASK}")):
         #     if stop in response:
         #         response = response[:response.index(stop)]
 
+        # response = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+
+        # # Better cleanup
+        # for stop in ["###", "<|end_of_text|>", "<|eot_id|>", "[INST]", "\n\n\n\n", "English:"]:
+        #     if stop in response:
+        #         response = response.split(stop)[0].strip()
+                
+        # # Remove any "Summary:" or "Answer:" prefixes if model repeats prompt
+        # response = response.replace("Summary:", "").replace("English:", "").strip()
+
+
+        new_tokens = outputs[0][inputs["input_ids"].shape[1]:]
         response = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
 
-        # Better cleanup
-        for stop in ["###", "<|end_of_text|>", "<|eot_id|>", "[INST]", "\n\n\n\n", "English:"]:
+        # Strong cleaning
+        stops = ["###", "<|end_of_text|>", "<|eot_id|>", "<|assistant|>", "[INST]", "\n\n\n", 
+                "Summary:", "English:", "Translation:", "Answer:"]
+
+        for stop in stops:
             if stop in response:
                 response = response.split(stop)[0].strip()
-                
-        # Remove any "Summary:" or "Answer:" prefixes if model repeats prompt
-        response = response.replace("Summary:", "").replace("English:", "").strip()
+
+        # Extra cleanup for Nepali tasks
+        if TASK in ["qa", "summarization"]:
+            # Remove accidental English phrases (rough but effective)
+            import re
+            response = re.sub(r'\b[A-Za-z]{8,}\b', '', response)  # remove long English words
+            response = re.sub(r'\s+', ' ', response).strip()
+
+        response = response.strip()
 
         ref = ex.get(REF_FIELDS[TASK], "").strip()
         if response.strip() and ref:
