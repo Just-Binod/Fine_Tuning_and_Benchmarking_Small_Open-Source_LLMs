@@ -136,33 +136,50 @@ MODEL_CONFIGS = {
 ###
 TRAINING_CONFIG = {
     "translation": {
-        "num_epochs":    3,
+        "num_epochs":    2,
         "batch_size":    2,
         "grad_accum":    8,
-        "lr":            1e-4,          # Lower = safer, less forgetting
+        "lr":            5e-5,          # Lower = safer, less forgetting
         "max_seq_len":   512,
-        "warmup_steps":  40,
+        "warmup_steps":  50,
     },
     "qa": {
-        "num_epochs":    3,
+        "num_epochs":    2,
         "batch_size":    2,
         "grad_accum":    8,
-        "lr":            1e-4,
+        "lr":            5e-5,
         "max_seq_len":   512,
-        "warmup_steps":  40,
+        "warmup_steps":  50,
     },
     "summarization": {
-        "num_epochs":    3,
+        "num_epochs":    2,
         "batch_size":    2,
         "grad_accum":    8,
-        "lr":            1e-4,
+        "lr":            5e-5,
         "max_seq_len":   512,
-        "warmup_steps":  40,
+        "warmup_steps":  50,
     },
 }
 
+
+###
+# TRAINING_CONFIG = {
+#     "translation": {
+#         "num_epochs":    2,
+#         "batch_size":    2,
+#         "grad_accum":    8,
+#         "lr":            5e-5,        # Very gentle
+#         "max_seq_len":   512,
+#         "warmup_steps":  50,
+#     },
+#     # copy same for qa and summarization if needed
+# }
+
+###
+
 # Task-specific LoRA rank
-LORA_RANK = 24 if TASK == "translation" else 16
+# LORA_RANK = 24 if TASK == "translation" else 16
+LORA_RANK = 16
 ###
 
 
@@ -468,13 +485,13 @@ for idx, ex in enumerate(tqdm(test_data, desc=f"  {TASK}")):
             outputs = model.generate(
                 **inputs,
                 max_new_tokens=512,
-                min_new_tokens=30,           # Allow decent length
-                temperature=0.7,             # Better creativity + fluency
-                top_p=0.92,
+                min_new_tokens=60,           # Allow decent length
+                temperature=0.75,             # Better creativity + fluency
+                top_p=0.9,
                 do_sample=True,
-                repetition_penalty=1.08,     # Mild
+                repetition_penalty=1.05,     # Mild
                 eos_token_id=tokenizer.eos_token_id,
-                pad_token_id=tokenizer.eos_token_id,
+                # pad_token_id=tokenizer.eos_token_id,
             )
             # outputs = model.generate(
             #     **inputs,
