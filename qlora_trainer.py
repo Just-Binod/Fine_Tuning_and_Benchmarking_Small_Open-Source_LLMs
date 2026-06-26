@@ -78,48 +78,90 @@ MODEL_CONFIGS = {
     },
 }
 
+# TRAINING_CONFIG = {
+#     "translation": {
+#         "num_epochs":    3,
+#         "batch_size":    4,
+#         "grad_accum":    4,
+#         "lr":            2e-4,
+#         "max_seq_len":   256,
+#         "warmup_steps":  20,
+#     },
+#     "qa": {
+#         "num_epochs":    3,
+#         "batch_size":    2,
+#         "grad_accum":    8,
+#         "lr":            2e-4,
+#         "max_seq_len":   512,
+#         "warmup_steps":  20,
+#     },
+#     "summarization": {
+#         "num_epochs":    3,
+#         "batch_size":    2,
+#         "grad_accum":    8,
+#         "lr":            2e-4,
+#         "max_seq_len":   512,
+#         "warmup_steps":  20,
+#     },
+# }
+
+
 TRAINING_CONFIG = {
     "translation": {
-        "num_epochs":    3,
-        "batch_size":    4,
-        "grad_accum":    4,
+        "num_epochs":    4,          # Increased to help pick up nuanced language structures
+        "batch_size":    2,          # Reduced batch to match QA/Summarization memory profiles
+        "grad_accum":    8,          # Rebalanced: 2 x 8 = 16 effective batch size
         "lr":            2e-4,
-        "max_seq_len":   256,
-        "warmup_steps":  20,
+        "max_seq_len":   1024,       # CRITICAL: Raised from 256/512 to prevent clipping
+        "warmup_steps":  50,         # More steps for smoother gradient stability
     },
     "qa": {
-        "num_epochs":    3,
+        "num_epochs":    4,
         "batch_size":    2,
         "grad_accum":    8,
         "lr":            2e-4,
-        "max_seq_len":   512,
-        "warmup_steps":  20,
+        "max_seq_len":   1024,       # CRITICAL: Ensures long context paragraphs fit comfortably
+        "warmup_steps":  50,
     },
     "summarization": {
-        "num_epochs":    3,
+        "num_epochs":    4,
         "batch_size":    2,
         "grad_accum":    8,
         "lr":            2e-4,
-        "max_seq_len":   512,
-        "warmup_steps":  20,
+        "max_seq_len":   1024,       # CRITICAL: Fits full source news articles easily
+        "warmup_steps":  50,
     },
 }
+
+# model_cfg = MODEL_CONFIGS[MODEL]
+# train_cfg = TRAINING_CONFIG[TASK]
+
+# # Task-specific overrides.
+# # Translation gets a bigger LoRA rank + longer context for better quality.
+# # Both increase activation/gradient memory, so batch_size is cut and
+# # grad_accum raised to keep the same effective batch size (16) without OOM.
+# if TASK == "translation":
+#     train_cfg["num_epochs"]  = 5
+#     train_cfg["lr"]          = 1.5e-4
+#     train_cfg["max_seq_len"] = 512
+#     train_cfg["batch_size"]  = 2
+#     train_cfg["grad_accum"]  = 8
+
+# LORA_RANK = 32 if TASK == "translation" else 16
 
 model_cfg = MODEL_CONFIGS[MODEL]
 train_cfg = TRAINING_CONFIG[TASK]
 
-# Task-specific overrides.
-# Translation gets a bigger LoRA rank + longer context for better quality.
-# Both increase activation/gradient memory, so batch_size is cut and
-# grad_accum raised to keep the same effective batch size (16) without OOM.
-if TASK == "translation":
-    train_cfg["num_epochs"]  = 5
-    train_cfg["lr"]          = 1.5e-4
-    train_cfg["max_seq_len"] = 512
-    train_cfg["batch_size"]  = 2
-    train_cfg["grad_accum"]  = 8
+# --- REMOVED TASK-SPECIFIC OVERRIDES TO STANDARDIZE ALL NLP TASKS ---
+# The logic below is now handled cleanly inside TRAINING_CONFIG.
+# if TASK == "translation":
+#     train_cfg["num_epochs"]  = 5
+#     train_cfg["lr"]          = 1.5e-4
+#     train_cfg["max_seq_len"] = 512
+#     train_cfg["batch_size"]  = 2
+#     train_cfg["grad_accum"]  = 8
 
-LORA_RANK = 32 if TASK == "translation" else 16
+LORA_RANK = 32 # Set to 32 globally for deep learning capacity across all tasks
 
 # 
 # STEP 1 — LOAD MODEL
@@ -313,10 +355,17 @@ Do not make up information.""",
 # Capture the main points and key information. Do not add your own opinions.""",
 
 
-"summarization": """You are an expert Nepali news summarizer.
-Summarize the given Nepali news article in **exactly 1 to 2 clear, complete sentences** in Nepali. 
-Aim for 40-80 words total. Capture the main event, key facts, and impact. 
-Do not add opinions or extra text. Write in natural, fluent Nepali.""",
+# "summarization": """You are an expert Nepali news summarizer.
+# Summarize the given Nepali news article in **exactly 1 to 2 clear, complete sentences** in Nepali. 
+# Aim for 40-80 words total. Capture the main event, key facts, and impact. 
+# Do not add opinions or extra text. Write in natural, fluent Nepali.""",
+
+"summarization": """You are an expert Nepali news summarizer. 
+Always respond in **Nepali only**. 
+Summarize in **exactly 1-2 complete sentences** (40-80 words). 
+Focus only on main events, who, what, when, impact. 
+Never add opinions, explanations, or English words.""",
+
 
 }
 
@@ -336,8 +385,11 @@ English:"""
         return f"Answer the following question in Nepali.\n\nQuestion:\n{q}"
     elif task == "summarization":
         # return f"Summarize the following Nepali news article in one or two sentences.\n\nArticle:\n{ex['article']}"
-        return f"""Summarize the following Nepali news article in **1 to 2 complete sentences** (40-80 words).
+        return f"""Summarize the following Nepali news article in 1 to 2 complete sentences. it must show the sole meaning of the whole text , notjust one line is summarized version. (40-80 words).
+        
 
+        
+        ##
 Article:
 {ex['article']}
 
@@ -360,26 +412,53 @@ for idx, ex in enumerate(tqdm(test_data, desc=f"  {TASK}")):
         prompt = tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
+        # inputs = tokenizer(
+        #     prompt, return_tensors="pt",
+        #     truncation=True, max_length=train_cfg["max_seq_len"]
+        # ).to(model.device)
         inputs = tokenizer(
             prompt, return_tensors="pt",
-            truncation=True, max_length=train_cfg["max_seq_len"]
+            truncation=True, max_length=1536 # Generous window to read the prompt and have room to generate
         ).to(model.device)
 
         with torch.no_grad():
+            # Inside the evaluation loop
             outputs = model.generate(
                 **inputs,
-                max_new_tokens=256,
-                min_new_tokens=40,     
-                #############
-                #max_new_tokens=128,
-
-                ############
-                temperature=0.40,
-                top_p=0.95,
+                max_new_tokens=256,       # Plenty of space for summaries/translations/answers
+                min_new_tokens=15,        # Low baseline to avoid forced filler words
+                temperature=0.3,          # Lowered from 0.7 to prevent structural hallucinations/repetition
+                top_p=0.9,
                 do_sample=True,
-                repetition_penalty=1.05,
+                repetition_penalty=1.15,  # Slightly boosted to suppress looped strings
                 pad_token_id=tokenizer.eos_token_id,
+                eos_token_id=tokenizer.eos_token_id,
             )
+            # outputs = model.generate(
+            #     **inputs,
+            #     max_new_tokens=512,      # Much higher
+            #     min_new_tokens=20,       # Lower - let it breathe
+            #     temperature=0.7,         # Higher for better fluency
+            #     top_p=0.9,
+            #     do_sample=True,
+            #     repetition_penalty=1.1,
+            #     pad_token_id=tokenizer.eos_token_id,
+            #     eos_token_id=tokenizer.eos_token_id,
+            # )
+                        # outputs = model.generate(
+            #     **inputs,
+            #     max_new_tokens=256,
+            #     min_new_tokens=40,     
+            #     #############
+            #     #max_new_tokens=128,
+
+            #     ############
+            #     temperature=0.40,
+            #     top_p=0.95,
+            #     do_sample=True,
+            #     repetition_penalty=1.05,
+            #     pad_token_id=tokenizer.eos_token_id,
+            # )
 
 
 
@@ -397,11 +476,21 @@ for idx, ex in enumerate(tqdm(test_data, desc=f"  {TASK}")):
    
 
         new_tokens = outputs[0][inputs["input_ids"].shape[1]:]
-        response   = tokenizer.decode(new_tokens, skip_special_tokens=True)
+        # response   = tokenizer.decode(new_tokens, skip_special_tokens=True)
 
-        for stop in ["###", "<|", "[INST]", "\n\n\n"]:
+        # for stop in ["###", "<|", "[INST]", "\n\n\n"]:
+        #     if stop in response:
+        #         response = response[:response.index(stop)]
+
+        response = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+
+        # Better cleanup
+        for stop in ["###", "<|end_of_text|>", "<|eot_id|>", "[INST]", "\n\n\n\n", "English:"]:
             if stop in response:
-                response = response[:response.index(stop)]
+                response = response.split(stop)[0].strip()
+                
+        # Remove any "Summary:" or "Answer:" prefixes if model repeats prompt
+        response = response.replace("Summary:", "").replace("English:", "").strip()
 
         ref = ex.get(REF_FIELDS[TASK], "").strip()
         if response.strip() and ref:
