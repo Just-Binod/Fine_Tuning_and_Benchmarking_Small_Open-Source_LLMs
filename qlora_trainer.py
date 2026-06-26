@@ -105,113 +105,50 @@ MODEL_CONFIGS = {
 #     },
 # }
 
-
-# TRAINING_CONFIG = {
-#     "translation": {
-#         "num_epochs":    4,          # Increased to help pick up nuanced language structures
-#         "batch_size":    2,          # Reduced batch to match QA/Summarization memory profiles
-#         "grad_accum":    8,          # Rebalanced: 2 x 8 = 16 effective batch size
-#         "lr":            2e-4,
-#         "max_seq_len":   1024,       # CRITICAL: Raised from 256/512 to prevent clipping
-#         "warmup_steps":  50,         # More steps for smoother gradient stability
-#     },
-#     "qa": {
-#         "num_epochs":    4,
-#         "batch_size":    2,
-#         "grad_accum":    8,
-#         "lr":            2e-4,
-#         "max_seq_len":   1024,       # CRITICAL: Ensures long context paragraphs fit comfortably
-#         "warmup_steps":  50,
-#     },
-#     "summarization": {
-#         "num_epochs":    4,
-#         "batch_size":    2,
-#         "grad_accum":    8,
-#         "lr":            2e-4,
-#         "max_seq_len":   1024,       # CRITICAL: Fits full source news articles easily
-#         "warmup_steps":  50,
-#     },
-# }
-
-###
 TRAINING_CONFIG = {
     "translation": {
-        "num_epochs":    2,
+        "num_epochs":    3,
         "batch_size":    2,
         "grad_accum":    8,
-        "lr":            5e-5,          # Lower = safer, less forgetting
+        "lr":            8e-5,
         "max_seq_len":   512,
-        "warmup_steps":  50,
+        "warmup_steps":  40,
     },
     "qa": {
-        "num_epochs":    2,
+        "num_epochs":    3,
         "batch_size":    2,
         "grad_accum":    8,
-        "lr":            5e-5,
+        "lr":            8e-5,
         "max_seq_len":   512,
-        "warmup_steps":  50,
+        "warmup_steps":  40,
     },
     "summarization": {
-        "num_epochs":    2,
+        "num_epochs":    3,
         "batch_size":    2,
         "grad_accum":    8,
-        "lr":            5e-5,
+        "lr":            8e-5,
         "max_seq_len":   512,
-        "warmup_steps":  50,
+        "warmup_steps":  40,
     },
 }
-
-
-###
-# TRAINING_CONFIG = {
-#     "translation": {
-#         "num_epochs":    2,
-#         "batch_size":    2,
-#         "grad_accum":    8,
-#         "lr":            5e-5,        # Very gentle
-#         "max_seq_len":   512,
-#         "warmup_steps":  50,
-#     },
-#     # copy same for qa and summarization if needed
-# }
-
-###
-
-# Task-specific LoRA rank
-# LORA_RANK = 24 if TASK == "translation" else 16
-LORA_RANK = 16
-###
-
-
-# model_cfg = MODEL_CONFIGS[MODEL]
-# train_cfg = TRAINING_CONFIG[TASK]
-
-# # Task-specific overrides.
-# # Translation gets a bigger LoRA rank + longer context for better quality.
-# # Both increase activation/gradient memory, so batch_size is cut and
-# # grad_accum raised to keep the same effective batch size (16) without OOM.
-# if TASK == "translation":
-#     train_cfg["num_epochs"]  = 5
-#     train_cfg["lr"]          = 1.5e-4
-#     train_cfg["max_seq_len"] = 512
-#     train_cfg["batch_size"]  = 2
-#     train_cfg["grad_accum"]  = 8
-
-# LORA_RANK = 32 if TASK == "translation" else 16
+# LoRA
+LORA_RANK = 24 if TASK == "translation" else 16
 
 model_cfg = MODEL_CONFIGS[MODEL]
 train_cfg = TRAINING_CONFIG[TASK]
 
-# --- REMOVED TASK-SPECIFIC OVERRIDES TO STANDARDIZE ALL NLP TASKS ---
-# The logic below is now handled cleanly inside TRAINING_CONFIG.
-# if TASK == "translation":
-#     train_cfg["num_epochs"]  = 5
-#     train_cfg["lr"]          = 1.5e-4
-#     train_cfg["max_seq_len"] = 512
-#     train_cfg["batch_size"]  = 2
-#     train_cfg["grad_accum"]  = 8
+# Task-specific overrides.
+# Translation gets a bigger LoRA rank + longer context for better quality.
+# Both increase activation/gradient memory, so batch_size is cut and
+# grad_accum raised to keep the same effective batch size (16) without OOM.
+if TASK == "translation":
+    train_cfg["num_epochs"]  = 5
+    train_cfg["lr"]          = 1.5e-4
+    train_cfg["max_seq_len"] = 512
+    train_cfg["batch_size"]  = 2
+    train_cfg["grad_accum"]  = 8
 
-LORA_RANK = 32 # Set to 32 globally for deep learning capacity across all tasks
+# LORA_RANK = 32 if TASK == "translation" else 16
 
 # 
 # STEP 1 — LOAD MODEL
@@ -228,7 +165,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     dtype=None,
 )
 
-print(f"   Base model loaded")
+print(f"  ✓ Base model loaded")
 print(f"  Parameters: {sum(p.numel() for p in model.parameters())/1e9:.1f}B")
 
 
@@ -236,13 +173,13 @@ print(f"  Parameters: {sum(p.numel() for p in model.parameters())/1e9:.1f}B")
 # STEP 2 — ADD LORA ADAPTERS
 # 
 
-print("\nSTEP 2 - Adding LoRA adapters...")
+print("\nSTEP 2 — Adding LoRA adapters...")
 
 model = FastLanguageModel.get_peft_model(
     model,
     r=LORA_RANK,
     lora_alpha=LORA_RANK * 2,
-    lora_dropout=0,           # 0 dropout - required for Unsloth fast path
+    lora_dropout=0,           # 0 dropout — required for Unsloth fast path
     target_modules=[
         "q_proj", "k_proj", "v_proj", "o_proj",
         "gate_proj", "up_proj", "down_proj",
@@ -254,7 +191,7 @@ model = FastLanguageModel.get_peft_model(
 
 trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
 total     = sum(p.numel() for p in model.parameters())
-print(f"   LoRA adapters added (r={LORA_RANK})")
+print(f"  ✓ LoRA adapters added (r={LORA_RANK})")
 print(f"  Trainable : {trainable/1e6:.1f}M / {total/1e9:.1f}B ({100*trainable/total:.2f}%)")
 
 
@@ -262,15 +199,14 @@ print(f"  Trainable : {trainable/1e6:.1f}M / {total/1e9:.1f}B ({100*trainable/to
 # STEP 3 — LOAD DATASET
 # 
 
-print(f"\nSTEP 3 - Loading {TASK} training data...")
+print(f"\nSTEP 3 — Loading {TASK} training data...")
 
 from datasets import Dataset
 
 TASK_PATHS = {
     "translation":   "outputs/formatted/translation/train.jsonl",
     "qa":            "outputs/formatted/qa/train.jsonl",
-    # "summarization": "outputs/formatted/summarization/train.jsonl",
-    "summarization": "outputs/news_scraped/train_fixed_v2.jsonl",
+    "summarization": "outputs/formatted/summarization/train.jsonl",
 }
 
 def load_jsonl(path):
@@ -279,12 +215,6 @@ def load_jsonl(path):
 
 raw_data = load_jsonl(TASK_PATHS[TASK])
 print(f"  Loaded {len(raw_data)} examples")
-
-
-##
-
-print("\n RAW TRAINING DATA CHECK (First Example):")
-print(json.dumps(raw_data[0], indent=2, ensure_ascii=False))
 
 # apply chat template — converts messages → model specific tokens
 def format_sample(example):
@@ -298,23 +228,15 @@ def format_sample(example):
 dataset = Dataset.from_list(raw_data)
 dataset = dataset.map(format_sample, desc="Applying chat template")
 
-###
-print("\n=== TRAINING DATA QUALITY CHECK ===")
-sample = dataset[0]['text']
-print(sample[:1200])  # First full example
-print("\n--- Last 300 chars (should contain assistant response) ---")
-print(sample[-300:])
-###
-
-print(f"   Formatted")
+print(f"  ✓ Formatted")
 print(f"  Sample: {dataset[0]['text'][:150].replace(chr(10),' ')}")
 
 
 # 
-# STEP 4  TRAIN 
+# STEP 4 — TRAIN
 # 
 
-print(f"\nSTEP 4 Training...")
+print(f"\nSTEP 4 — Training...")
 print(f"  Epochs      : {train_cfg['num_epochs']}")
 print(f"  Batch size  : {train_cfg['batch_size']} × {train_cfg['grad_accum']} = {train_cfg['batch_size']*train_cfg['grad_accum']} effective")
 print(f"  LR          : {train_cfg['lr']}")
@@ -414,23 +336,9 @@ Answer the question in Nepali based **only** on the provided context.
 If the answer is not in the context, say "माफ गर्नुहोस्, दिइएको सन्दर्भमा यो प्रश्नको जवाफ उपलब्ध छैन।"
 Do not make up information.""",
 
-#     "summarization": """You are an expert Nepali news summarizer.
-# Summarize the given Nepali news article in **1 to 2 clear and concise sentences** in Nepali.
-# Capture the main points and key information. Do not add your own opinions.""",
-
-
-# "summarization": """You are an expert Nepali news summarizer.
-# Summarize the given Nepali news article in **exactly 1 to 2 clear, complete sentences** in Nepali. 
-# Aim for 40-80 words total. Capture the main event, key facts, and impact. 
-# Do not add opinions or extra text. Write in natural, fluent Nepali.""",
-
-"summarization": """You are an expert Nepali news summarizer. 
-Always respond in **Nepali only**. 
-Summarize in **exactly 1-2 complete sentences** (40-80 words). 
-Focus only on main events, who, what, when, impact. 
-Never add opinions, explanations, or English words.""",
-
-
+    "summarization": """You are an expert Nepali news summarizer.
+Summarize the given Nepali news article in **1 to 2 clear and concise sentences** in Nepali.
+Capture the main points and key information. Do not add your own opinions.""",
 }
 
 def build_user_message(task, ex):
@@ -448,16 +356,7 @@ English:"""
             return f"Read the following context carefully and answer the question.\n\nContext:\n{ctx}\n\nQuestion:\n{q}"
         return f"Answer the following question in Nepali.\n\nQuestion:\n{q}"
     elif task == "summarization":
-        # return f"Summarize the following Nepali news article in one or two sentences.\n\nArticle:\n{ex['article']}"
-        return f"""Summarize the following Nepali news article in 1 to 2 complete sentences. it must show the sole meaning of the whole text , notjust one line is summarized version. (40-80 words).
-        
-
-        
-        ##
-Article:
-{ex['article']}
-
-Summary:"""
+        return f"Summarize the following Nepali news article in one or two sentences.\n\nArticle:\n{ex['article']}"
 
 
 test_data = load_jsonl(TEST_PATHS[TASK])
@@ -476,123 +375,68 @@ for idx, ex in enumerate(tqdm(test_data, desc=f"  {TASK}")):
         prompt = tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
+
+
+        inputs = tokenizer(
+            prompt, return_tensors="pt",
+            truncation=True, max_length=512
+        ).to(model.device)
+
+        with torch.no_grad():
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=256,
+                min_new_tokens=20,
+                temperature=0.65,
+                top_p=0.92,
+                do_sample=True,
+                repetition_penalty=1.08,
+                pad_token_id=tokenizer.eos_token_id,
+                eos_token_id=tokenizer.eos_token_id,
+            )
+
+        new_tokens = outputs[0][inputs["input_ids"].shape[1]:]
+        response = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+
+        # Strong cleaning
+        stops = ["###", "<|end_of_text|>", "<|eot_id|>", "<|assistant|>", "English:", "Or, in English"]
+        for stop in stops:
+            if stop in response:
+                response = response.split(stop)[0].strip()
+
+        response = response.replace("English:", "").strip()
+
         # inputs = tokenizer(
         #     prompt, return_tensors="pt",
         #     truncation=True, max_length=train_cfg["max_seq_len"]
         # ).to(model.device)
-        inputs = tokenizer(
-            prompt, return_tensors="pt",
-            truncation=True, max_length=1536 # Generous window to read the prompt and have room to generate
-        ).to(model.device)
 
-        with torch.no_grad():
-            # Inside the evaluation loop
-            # with torch.no_grad():
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=512,
-                min_new_tokens=60,           # Allow decent length
-                temperature=0.75,             # Better creativity + fluency
-                top_p=0.9,
-                do_sample=True,
-                repetition_penalty=1.05,     # Mild
-                eos_token_id=tokenizer.eos_token_id,
-                # pad_token_id=tokenizer.eos_token_id,
-            )
-            # outputs = model.generate(
-            #     **inputs,
-            #     max_new_tokens=256,       # Plenty of space for summaries/translations/answers
-            #     min_new_tokens=15,        # Low baseline to avoid forced filler words
-            #     temperature=0.3,          # Lowered from 0.7 to prevent structural hallucinations/repetition
-            #     top_p=0.9,
-            #     do_sample=True,
-            #     repetition_penalty=1.15,  # Slightly boosted to suppress looped strings
-            #     pad_token_id=tokenizer.eos_token_id,
-            #     eos_token_id=tokenizer.eos_token_id,
-            # )
-            # outputs = model.generate(
-            #     **inputs,
-            #     max_new_tokens=512,      # Much higher
-            #     min_new_tokens=20,       # Lower - let it breathe
-            #     temperature=0.7,         # Higher for better fluency
-            #     top_p=0.9,
-            #     do_sample=True,
-            #     repetition_penalty=1.1,
-            #     pad_token_id=tokenizer.eos_token_id,
-            #     eos_token_id=tokenizer.eos_token_id,
-            # )
-                        # outputs = model.generate(
-            #     **inputs,
-            #     max_new_tokens=256,
-            #     min_new_tokens=40,     
-            #     #############
-            #     #max_new_tokens=128,
+        # with torch.no_grad():
+        #     outputs = model.generate(
+        #         **inputs,
+        #         #max_new_tokens=256,
+        #         #############
+        #         max_new_tokens=128,
 
-            #     ############
-            #     temperature=0.40,
-            #     top_p=0.95,
-            #     do_sample=True,
-            #     repetition_penalty=1.05,
-            #     pad_token_id=tokenizer.eos_token_id,
-            # )
+        #         ############
+        #         temperature=0.3,
+        #         top_p=0.9,
+        #         do_sample=True,
+        #         repetition_penalty=1.1,
+        #         pad_token_id=tokenizer.eos_token_id,
+        #     )
 
-
-
-
-#             outputs = model.generate(
-#                  **inputs,
-#             max_new_tokens=256,      # Increased
-#             min_new_tokens=50,       # Important - prevents too short
-#             temperature=0.45,
-#             top_p=0.92,
-#             do_sample=True,
-#             repetition_penalty=1.08,
-#             pad_token_id=tokenizer.eos_token_id,
-# )
-   
-
-        new_tokens = outputs[0][inputs["input_ids"].shape[1]:]
+        # new_tokens = outputs[0][inputs["input_ids"].shape[1]:]
         # response   = tokenizer.decode(new_tokens, skip_special_tokens=True)
 
         # for stop in ["###", "<|", "[INST]", "\n\n\n"]:
         #     if stop in response:
         #         response = response[:response.index(stop)]
 
-        # response = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
-
-        # # Better cleanup
-        # for stop in ["###", "<|end_of_text|>", "<|eot_id|>", "[INST]", "\n\n\n\n", "English:"]:
-        #     if stop in response:
-        #         response = response.split(stop)[0].strip()
-                
-        # # Remove any "Summary:" or "Answer:" prefixes if model repeats prompt
-        # response = response.replace("Summary:", "").replace("English:", "").strip()
-
-
-        new_tokens = outputs[0][inputs["input_ids"].shape[1]:]
-        response = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
-
-        # Strong cleaning
-        stops = ["###", "<|end_of_text|>", "<|eot_id|>", "<|assistant|>", "[INST]", "\n\n\n", 
-                "Summary:", "English:", "Translation:", "Answer:"]
-
-        for stop in stops:
-            if stop in response:
-                response = response.split(stop)[0].strip()
-
-        # Extra cleanup for Nepali tasks
-        if TASK in ["qa", "summarization"]:
-            # Remove accidental English phrases (rough but effective)
-            import re
-            response = re.sub(r'\b[A-Za-z]{8,}\b', '', response)  # remove long English words
-            response = re.sub(r'\s+', ' ', response).strip()
-
-        response = response.strip()
-
-        ref = ex.get(REF_FIELDS[TASK], "").strip()
-        if response.strip() and ref:
-            predictions.append(response.strip())
-            references.append(ref)
+        # ref = ex.get(REF_FIELDS[TASK], "").strip()
+        # if response.strip() and ref:
+        #     predictions.append(response.strip())
+        #     references.append(ref)
 
     except Exception:
         continue
@@ -603,7 +447,7 @@ for idx, ex in enumerate(tqdm(test_data, desc=f"  {TASK}")):
         torch.cuda.empty_cache()
 
 scores = compute_metrics(TASK, predictions, references)
-print(f"\n   Fine-tuned scores : {scores}")
+print(f"\n  ✓ Fine-tuned scores : {scores}")
 print(f"  Evaluated {len(predictions)}/100 examples")
 
 print(f"\n  Sample predictions:")
