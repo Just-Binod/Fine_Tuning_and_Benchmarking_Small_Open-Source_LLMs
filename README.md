@@ -148,9 +148,7 @@ GEN_PARAMS = {
 
 ### QA data
 
-**Primary dataset**
-
-`iwasbinod/QA_nepali_5000_pairs_syn` - approximately 5,000 cleaned synthetic Nepali QA pairs, span-aligned against their own contexts.
+*
 
 **Additional supervision**
 
